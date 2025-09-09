@@ -1,0 +1,135 @@
+---
+title: "artes_llms"
+format: html
+editor: visual
+---
+
+```{r, include = FALSE}
+library("tidyverse")
+library("here")
+library("kableExtra")
+```
+
+```{r}
+dialect_LLMs_tidy <- read_delim("dialect_LLMs_tidy.csv", 
+                                delim = ";", escape_double = FALSE, trim_ws = TRUE)
+         
+```
+
+# Preprocessing, cleaning etc.
+
+```{r}
+dialect_LLMs_tidy_corr <- dialect_LLMs_tidy |> 
+  group_by(variety) |> 
+  count(correction) |> 
+  mutate(percentage = proportions(n) * 100)
+
+dialect_LLMs_tidy_corr <- dialect_LLMs_tidy_corr |> 
+  mutate(
+    correction = case_when(
+      correction == "y" ~ "yes",
+      correction == "n" ~ "no"))
+
+#dialect_LLMs_tidy_corr <- dialect_LLMs_tidy_corr |> 
+  #mutate(variety = recode(variety,
+                          #"WME" = "White Mainstream English",
+                          #"AAE" = "African American English",
+                          #"IndE" = "Indian English"))
+
+dialect_LLMs_tidy_corr$correction<- factor(
+  dialect_LLMs_tidy_corr$correction,
+  levels = c("yes", "no")
+)
+```
+
+```{r}
+dialect_LLMs_tidy_model <- dialect_LLMs_tidy |> 
+  group_by(model, variety) |> 
+  count(correction) |> 
+  mutate(percentage = proportions(n) * 100)
+
+dialect_LLMs_tidy_model <- dialect_LLMs_tidy_model |> 
+  mutate(
+    correction = case_when(
+      correction == "y" ~ "yes",
+      correction == "n" ~ "no"))
+
+dialect_LLMs_tidy_model$correction<- factor(
+  dialect_LLMs_tidy_model$correction,
+  levels = c("yes", "no")
+)
+
+dialect_LLMs_tidy_model$model<- factor(
+  dialect_LLMs_tidy_model$model,
+  levels = c("GPT", "Meta Llama", "DeepSeek")
+)
+```
+
+# Plots
+
+```{r}
+gg_correction1 <- ggplot(dialect_LLMs_tidy_corr,
+       aes(x = correction,
+           y = percentage,
+           fill = correction)) +
+  facet_wrap(~ variety) +
+  geom_col()+
+  labs(x = "Correction",
+       y = "Percentage") +
+  scale_y_continuous(expand = c(0,0)) +
+  #                   limits = c(0,60)) +
+  scale_fill_manual(values = c("yes" = "darkgreen",
+                               "no" = "steelblue")) +
+  theme_light() + 
+  theme(legend.position = "none")
+
+gg_correction1
+
+# correction across varieties, divided into models
+
+gg_correction2 <- ggplot(dialect_LLMs_tidy_model,
+                        aes(x = model,
+                            y = percentage,
+                            fill = correction)) +
+  #facet_wrap(~ variety) +
+  geom_bar(stat="identity")+
+  labs(x = "Model",
+       y = "Percentage") +
+  #scale_y_continuous(expand = c(0,0)) +
+  #                   limits = c(0,60)) +
+  scale_fill_manual(values = c("#CC6677","#6699CC")) +
+  theme_minimal()
+
+gg_correction2
+```
+
+Plotting for model
+
+```{r}
+
+gg_model <- ggplot(dialect_LLMs_tidy_model,
+                        aes(x = variety,
+                            y = percentage,
+                            fill = correction)) +
+  facet_wrap(~ model) +
+  geom_col()+
+  labs(x = "",
+       y = "Percentage") +
+  scale_y_continuous(expand = c(0,0)) +
+  #                   limits = c(0,60)) +
+  scale_fill_manual(values = c("#CC6677","#6699CC")) +
+  theme_classic()
+
+gg_model
+```
+
+# Table
+
+```{r}
+corr_table <- table(dialect_LLMs_tidy$variety, dialect_LLMs_tidy$correction, dialect_LLMs_tidy$model)
+
+kbl(corr_table, col.names = c("Variety", "Correction", "Model", "Frequency"), booktabs = T) |> 
+  kable_styling(latex_options = "striped")
+
+#table(dialect_LLMs_tidy_corr$variety, dialect_LLMs_tidy_corr$n)
+```
