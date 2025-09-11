@@ -1,6 +1,6 @@
 ---
 title: "artes_llms"
-format: html
+format: pdf
 editor: visual
 ---
 
